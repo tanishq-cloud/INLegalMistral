@@ -7,9 +7,16 @@ from dotenv import load_dotenv
 import os
 from typing import List
 
+import toml
 # Load environment variables from a .env file
-load_dotenv()
 
+def load_config(file_path: str):
+    with open(file_path, "rb") as config_file:  # Use "r" for toml library
+        return tomllib.load(config_file)
+
+
+load_dotenv()
+config = load_config("secrets.toml")
 
 def get_snowpark_session():
     """Create or retrieve Snowpark session from streamlit session state"""
@@ -19,14 +26,14 @@ def get_snowpark_session():
         except:
             pass
         connection_params = {
-            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-            "user": os.getenv("SNOWFLAKE_USER"),
-            "password": os.getenv("SNOWFLAKE_USER_PASSWORD"),
-            "role": os.getenv("SNOWFLAKE_ROLE"),
-            "database": os.getenv("SNOWFLAKE_DATABASE"),
-            "schema": os.getenv("SNOWFLAKE_SCHEMA"),
-            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE")
-        }
+    "account": config["snowflake"]["account"],
+    "user": config["snowflake"]["user"],
+    "password": config["snowflake"]["password"],
+    "role": config["snowflake"]["role"],
+    "database": config["snowflake"]["database"],
+    "schema": config["snowflake"]["schema"],
+    "warehouse": config["snowflake"]["warehouse"]
+}
         st.session_state.snowpark_session = Session.builder.configs(connection_params).create()
     return st.session_state.snowpark_session
 

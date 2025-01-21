@@ -164,3 +164,5 @@ fine_tune.ipynb
 csv.zip
 app.py
 default.sqlite
+.snowflake
+secrets.toml
