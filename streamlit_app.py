@@ -10,9 +10,14 @@ from typing import List
 # Load environment variables from a .env file
 load_dotenv()
 
+
 def get_snowpark_session():
     """Create or retrieve Snowpark session from streamlit session state"""
     if "snowpark_session" not in st.session_state:
+        try:
+            Session.close_all()
+        except:
+            pass
         connection_params = {
             "account": os.getenv("SNOWFLAKE_ACCOUNT"),
             "user": os.getenv("SNOWFLAKE_USER"),
@@ -33,10 +38,11 @@ CORTEX_SEARCH_SERVICE = "LEGAL_JUDGEMENTS_CORTEX_SEARCH_SERVICE"
 # Cortex Search Retriever Class
 class CortexSearchRetriever:
     def __init__(self, limit_to_retrieve: int = 4):
-        self._session = get_snowpark_session()
+        
         self._limit_to_retrieve = limit_to_retrieve
 
     def retrieve(self, query: str) -> List[str]:
+        self._session = get_snowpark_session()
         root = Root(self._session)
         cortex_search_service = (
             root
@@ -116,31 +122,39 @@ def config_options():
     st.sidebar.button("Start Over", on_click=init_messages)
 
 def main():
-    st.title("⚖️ Indian Legal Assistant")
-    st.write("Ask questions about Indian Supreme Court cases and legal precedents.")
-    
-    init_messages()
-    config_options()
-    
-    legal_rag = get_legal_rag()
-
-    # Display chat messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    if question := st.chat_input("Ask your legal question..."):
-        st.session_state.messages.append({"role": "user", "content": question})
+    try:
+        st.title("⚖️ Indian Legal Assistant")
+        st.write("Ask questions about Indian Supreme Court cases and legal precedents.")
         
-        with st.chat_message("user"):
-            st.markdown(f"**You asked:** {question}")
+        init_messages()
+        config_options()
         
-        with st.chat_message("assistant"):
-            with st.spinner("Generating legal analysis..."):
-                chat_history = get_chat_history()
-                response = legal_rag.query(question)
-                st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+        legal_rag = get_legal_rag()
+
+        # Display chat messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        if question := st.chat_input("Ask your legal question..."):
+            st.session_state.messages.append({"role": "user", "content": question})
+            
+            with st.chat_message("user"):
+                st.markdown(f"**You asked:** {question}")
+            
+            with st.chat_message("assistant"):
+                with st.spinner("Generating legal analysis..."):
+                    chat_history = get_chat_history()
+                    response = legal_rag.query(question)
+                    st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+    finally:
+        # Cleanup on exit
+        if "snowpark_session" in st.session_state:
+            try:
+                st.session_state.snowpark_session.close()
+            except:
+                pass
 
 if __name__ == "__main__":
     main()
