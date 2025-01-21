@@ -1,14 +1,34 @@
 import streamlit as st
-from snowflake.snowpark.context import get_active_session
+from snowflake.snowpark.session import Session
 from snowflake.core import Root
 from snowflake.cortex import Complete
 import pandas as pd
-
+from dotenv import load_dotenv
+import os
 from typing import List
 
-pd.set_option("max_colwidth", None)
+# Load environment variables from a .env file
+load_dotenv()
 
-### Default Values
+# Set Snowflake connection parameters
+connection_params = {
+    "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+    "user": os.getenv("SNOWFLAKE_USER"),
+    "password": os.getenv("SNOWFLAKE_USER_PASSWORD"),
+    "role": os.getenv("SNOWFLAKE_ROLE"),
+    "database": os.getenv("SNOWFLAKE_DATABASE"),
+    "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+    "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE")
+}
+
+# Create the Snowpark session (only once)
+if "snowpark_session" not in st.session_state:
+    snowpark_session = Session.builder.configs(connection_params).create()
+    st.session_state.snowpark_session = snowpark_session
+else:
+    snowpark_session = st.session_state.snowpark_session
+
+# Default Values
 NUM_CHUNKS = 3  # Number of chunks to retrieve for context
 SLIDE_WINDOW = 7  # Number of previous messages to consider for context
 
@@ -17,10 +37,8 @@ CORTEX_SEARCH_DATABASE = "LEGAL_DATA_DB"
 CORTEX_SEARCH_SCHEMA = "LEGAL_DATA_SCHEMA"
 CORTEX_SEARCH_SERVICE = "LEGAL_JUDGEMENTS_CORTEX_SEARCH_SERVICE"
 
-#
-
-# Initialize session
-session = get_active_session()
+# Use the session stored in the session state
+session = snowpark_session
 
 # Cortex Search Retriever Class
 class CortexSearchRetriever:
@@ -55,7 +73,6 @@ class LLegalRAG:
             limit_to_retrieve=5  # Increased to get more relevant cases
         )
 
-   
     def retrieve_context(self, query: str) -> List[str]:
         """
         Retrieve relevant cases from vector store.
@@ -63,7 +80,6 @@ class LLegalRAG:
         """
         return self.retriever.retrieve(query)
 
-    
     def generate_legal_analysis(self, query: str, context: List[str]) -> str:
         """
         Generate comprehensive legal analysis based on retrieved cases.
@@ -88,7 +104,6 @@ class LLegalRAG:
         """
         return Complete("mistral-large", prompt)
 
-   
     def query(self, query: str) -> str:
         """
         Main method to process legal queries and generate analysis.
@@ -119,7 +134,6 @@ def config_options():
         ('mistral-7b', 'mistral-large', 'mixtral-8x7b'),
         key="model_name"
     )
-    
     
     st.sidebar.checkbox('Remember chat history?', key="use_chat_history", value=True)
     st.sidebar.button("Start Over", on_click=init_messages)
