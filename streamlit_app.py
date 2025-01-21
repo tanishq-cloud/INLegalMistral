@@ -6,6 +6,7 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 from typing import List
+from snowflake.snowpark.functions import udf  # Import udf from Snowpark
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -111,6 +112,12 @@ class LLegalRAG:
         # 1. Retrieve relevant cases
         raw_cases = self.retrieve_context(query)
         return self.generate_legal_analysis(query, raw_cases)
+
+# Register UDF for session
+def udf_function(query: str) -> str:
+    return legal_rag.query(query)
+
+session.udf.register(udf_function, return_type="STRING", input_types=["STRING"])
 
 # Initialize the Legal RAG system
 legal_rag = LLegalRAG()
