@@ -12,7 +12,7 @@ import toml
 
 def load_config(file_path: str):
     with open(file_path, "rb") as config_file:  # Use "r" for toml library
-        return tomllib.load(config_file)
+        return toml.load(config_file)
 
 
 load_dotenv()
