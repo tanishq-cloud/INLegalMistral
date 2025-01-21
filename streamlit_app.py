@@ -16,7 +16,7 @@ def load_config(file_path: str):
 
 
 load_dotenv()
-config = load_config(".streamlit/secrets.toml")
+
 
 def get_snowpark_session():
     """Create or retrieve Snowpark session from streamlit session state"""
@@ -26,13 +26,13 @@ def get_snowpark_session():
         except:
             pass
         connection_params = {
-    "account": st.secrets["account"],
-    "user": st.secrets["user"],
-    "password": st.secrets["password"],
-    "role": st.secrets["role"],
-    "database": st.secrets["database"],
-    "schema": st.secrets["schema"],
-    "warehouse": st.secrets["warehouse"]
+    "account": st.secrets["snowflake"]["account"],
+    "user": st.secrets["snowflake"]["user"],
+    "password": st.secrets["snowflake"]["password"],
+    "role": st.secrets["snowflake"]["role"],
+    "database": st.secrets["snowflake"]["database"],
+    "schema": st.secrets["snowflake"]["schema"],
+    "warehouse": st.secrets["snowflake"]["warehouse"]
 }
         st.session_state.snowpark_session = Session.builder.configs(connection_params).create()
     return st.session_state.snowpark_session
