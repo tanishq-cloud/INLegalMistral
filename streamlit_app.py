@@ -6,7 +6,8 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 from typing import List
-from snowflake.snowpark.functions import udf  # Import udf from Snowpark
+from snowflake.snowpark.functions import udf
+from snowflake.snowpark.types import StringType# Import udf from Snowpark
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -117,7 +118,7 @@ class LLegalRAG:
 def udf_function(query: str) -> str:
     return legal_rag.query(query)
 
-session.udf.register(udf_function, return_type="STRING", input_types=["STRING"])
+session.udf.register(udf_function, return_type=StringType(), input_types=[StringType()])
 
 # Initialize the Legal RAG system
 legal_rag = LLegalRAG()
