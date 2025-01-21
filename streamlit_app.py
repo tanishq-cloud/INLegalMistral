@@ -26,13 +26,13 @@ def get_snowpark_session():
         except:
             pass
         connection_params = {
-    "account": config["snowflake"]["account"],
-    "user": config["snowflake"]["user"],
-    "password": config["snowflake"]["password"],
-    "role": config["snowflake"]["role"],
-    "database": config["snowflake"]["database"],
-    "schema": config["snowflake"]["schema"],
-    "warehouse": config["snowflake"]["warehouse"]
+    "account": st.secrets["account"],
+    "user": st.secrets["user"],
+    "password": st.secrets["password"],
+    "role": st.secrets["role"],
+    "database": st.secrets["database"],
+    "schema": st.secrets["schema"],
+    "warehouse": st.secrets["warehouse"]
 }
         st.session_state.snowpark_session = Session.builder.configs(connection_params).create()
     return st.session_state.snowpark_session
