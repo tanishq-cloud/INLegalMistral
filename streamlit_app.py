@@ -21,7 +21,7 @@ connection_params = {
     "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE")
 }
 
-# Create the Snowpark session (only once)
+# Create the Snowpark session (only once, stored in session state)
 if "snowpark_session" not in st.session_state:
     snowpark_session = Session.builder.configs(connection_params).create()
     st.session_state.snowpark_session = snowpark_session
