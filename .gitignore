@@ -165,4 +165,4 @@ csv.zip
 app.py
 default.sqlite
 .snowflake
-secrets.toml
+.streamlit/secrets.toml

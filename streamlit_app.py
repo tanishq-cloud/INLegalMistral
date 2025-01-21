@@ -16,7 +16,7 @@ def load_config(file_path: str):
 
 
 load_dotenv()
-config = load_config("secrets.toml")
+config = load_config(".streamlit/secrets.toml")
 
 def get_snowpark_session():
     """Create or retrieve Snowpark session from streamlit session state"""
