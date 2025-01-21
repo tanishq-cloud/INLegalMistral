@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 import os
 from typing import List
 
-import toml
+import tomllib
 # Load environment variables from a .env file
 
 def load_config(file_path: str):
     with open(file_path, "rb") as config_file:  # Use "r" for toml library
-        return toml.load(config_file)
+        return tomllib.load(config_file)
 
 
 load_dotenv()
