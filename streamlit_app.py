@@ -6,46 +6,34 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 from typing import List
-from snowflake.snowpark.functions import udf
-from snowflake.snowpark.types import StringType# Import udf from Snowpark
 
 # Load environment variables from a .env file
 load_dotenv()
 
-# Set Snowflake connection parameters
-connection_params = {
-    "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-    "user": os.getenv("SNOWFLAKE_USER"),
-    "password": os.getenv("SNOWFLAKE_USER_PASSWORD"),
-    "role": os.getenv("SNOWFLAKE_ROLE"),
-    "database": os.getenv("SNOWFLAKE_DATABASE"),
-    "schema": os.getenv("SNOWFLAKE_SCHEMA"),
-    "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE")
-}
-
-# Create the Snowpark session (only once, stored in session state)
-if "snowpark_session" not in st.session_state:
-    snowpark_session = Session.builder.configs(connection_params).create()
-    st.session_state.snowpark_session = snowpark_session
-else:
-    snowpark_session = st.session_state.snowpark_session
-
-# Default Values
-NUM_CHUNKS = 3  # Number of chunks to retrieve for context
-SLIDE_WINDOW = 7  # Number of previous messages to consider for context
+def get_snowpark_session():
+    """Create or retrieve Snowpark session from streamlit session state"""
+    if "snowpark_session" not in st.session_state:
+        connection_params = {
+            "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+            "user": os.getenv("SNOWFLAKE_USER"),
+            "password": os.getenv("SNOWFLAKE_USER_PASSWORD"),
+            "role": os.getenv("SNOWFLAKE_ROLE"),
+            "database": os.getenv("SNOWFLAKE_DATABASE"),
+            "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+            "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE")
+        }
+        st.session_state.snowpark_session = Session.builder.configs(connection_params).create()
+    return st.session_state.snowpark_session
 
 # Service Parameters
 CORTEX_SEARCH_DATABASE = "LEGAL_DATA_DB"
 CORTEX_SEARCH_SCHEMA = "LEGAL_DATA_SCHEMA"
 CORTEX_SEARCH_SERVICE = "LEGAL_JUDGEMENTS_CORTEX_SEARCH_SERVICE"
 
-# Use the session stored in the session state
-session = snowpark_session
-
 # Cortex Search Retriever Class
 class CortexSearchRetriever:
-    def __init__(self, session, limit_to_retrieve: int = 4):
-        self._session = session
+    def __init__(self, limit_to_retrieve: int = 4):
+        self._session = get_snowpark_session()
         self._limit_to_retrieve = limit_to_retrieve
 
     def retrieve(self, query: str) -> List[str]:
@@ -71,21 +59,13 @@ class CortexSearchRetriever:
 class LLegalRAG:
     def __init__(self):
         self.retriever = CortexSearchRetriever(
-            session=session,
-            limit_to_retrieve=5  # Increased to get more relevant cases
+            limit_to_retrieve=5
         )
 
     def retrieve_context(self, query: str) -> List[str]:
-        """
-        Retrieve relevant cases from vector store.
-        Returns list of cases with their details.
-        """
         return self.retriever.retrieve(query)
 
     def generate_legal_analysis(self, query: str, context: List[str]) -> str:
-        """
-        Generate comprehensive legal analysis based on retrieved cases.
-        """
         prompt = f"""
         You are an expert Indian legal assistant analyzing Supreme Court cases.
         Analyze the following legal scenario and relevant case laws to provide advice.
@@ -107,23 +87,13 @@ class LLegalRAG:
         return Complete("mistral-large", prompt)
 
     def query(self, query: str) -> str:
-        """
-        Main method to process legal queries and generate analysis.
-        """
-        # 1. Retrieve relevant cases
         raw_cases = self.retrieve_context(query)
         return self.generate_legal_analysis(query, raw_cases)
 
-# Register UDF for session
-def udf_function(query: str) -> str:
-    return legal_rag.query(query)
-
-session.udf.register(udf_function, return_type=StringType(), input_types=[StringType()])
-
-# Initialize the Legal RAG system
-legal_rag = LLegalRAG()
-
-# Streamlit App
+@st.cache_resource
+def get_legal_rag():
+    """Create or retrieve LegalRAG instance"""
+    return LLegalRAG()
 
 def init_messages():
     """Initialize chat history."""
@@ -132,7 +102,7 @@ def init_messages():
 
 def get_chat_history():
     """Get the chat history within the slide window."""
-    start_index = max(0, len(st.session_state.messages) - SLIDE_WINDOW)
+    start_index = max(0, len(st.session_state.messages) - 7)
     return st.session_state.messages[start_index:]
 
 def config_options():
@@ -142,31 +112,29 @@ def config_options():
         ('mistral-7b', 'mistral-large', 'mixtral-8x7b'),
         key="model_name"
     )
-    
     st.sidebar.checkbox('Remember chat history?', key="use_chat_history", value=True)
     st.sidebar.button("Start Over", on_click=init_messages)
 
 def main():
-    """Streamlit main function."""
     st.title("⚖️ Indian Legal Assistant")
     st.write("Ask questions about Indian Supreme Court cases and legal precedents.")
+    
     init_messages()
     config_options()
+    
+    legal_rag = get_legal_rag()
 
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Accept user input
     if question := st.chat_input("Ask your legal question..."):
         st.session_state.messages.append({"role": "user", "content": question})
         
-        # Display the user's question before generating the response
         with st.chat_message("user"):
             st.markdown(f"**You asked:** {question}")
         
-        # Show loading indicator while the response is being processed
         with st.chat_message("assistant"):
             with st.spinner("Generating legal analysis..."):
                 chat_history = get_chat_history()
