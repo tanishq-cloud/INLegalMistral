@@ -25,7 +25,7 @@ This application provides an interactive platform where users can ask questions 
 Install the required libraries by running:
 
 ```bash
-pip install streamlit snowflake-snowpark-python snowflake-ml-python snowflake.core -q
+pip install -r requirements.txt
 ```
 
 ### 2. Snowflake Setup
@@ -51,7 +51,7 @@ Edit the configuration variables in the script to match your Snowflake setup:
 Run the app using Streamlit:
 
 ```bash
-streamlit run legalRag.py
+streamlit run streamlit_app.py
 ```
 
 This will start a local development server. Open the URL provided by Streamlit to access the application in your browser.
